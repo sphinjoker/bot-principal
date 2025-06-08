@@ -2,7 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.ui import View, Button
 from flask import Flask
 from threading import Thread
@@ -43,6 +43,7 @@ ROLE_REFUSE_ID = 1380987903760535633
 ROLE_NON_WHITELIST_ID = 1380997110966784102
 CATEGORY_TICKET_ID = 1380996255664312391
 CHANNEL_LOG_TICKET_ID = 1380996350442864701
+STAFF_EMBED_CHANNEL_ID = 1380988215984394320  # Remplacer par l'ID réel
 
 STAFF_ROLES = [
     {"name": "👑 Directeur", "id": 1380987816997032106, "color": 0x0c0c0c},
@@ -59,6 +60,46 @@ STAFF_ROLES = [
 @bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user}")
+    update_staff_embed.start()
+
+# Tâche pour mettre à jour l'embed staff
+@tasks.loop(minutes=5)
+async def update_staff_embed():
+    channel = bot.get_channel(STAFF_EMBED_CHANNEL_ID)
+    if not channel:
+        return
+    guild = channel.guild
+    embed = discord.Embed(
+        title="📋 Liste des Membres du Staff",
+        description="Mise à jour automatique toutes les 5 minutes.",
+        color=0x2f3136
+    )
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+    top_color = None
+    for role_info in STAFF_ROLES:
+        role = guild.get_role(role_info["id"])
+        if role:
+            members = [m.mention for m in role.members]
+            if members:
+                if not top_color:
+                    top_color = role_info["color"]
+                embed.add_field(
+                    name=f"{role_info['name']} ・ {len(members)} membre(s)",
+                    value="\n".join(members),
+                    inline=False
+                )
+    if top_color:
+        embed.color = top_color
+    messages = await channel.history(limit=10).flatten()
+    existing_msg = None
+    for msg in messages:
+        if msg.author == bot.user and msg.embeds and msg.embeds[0].title == "📋 Liste des Membres du Staff":
+            existing_msg = msg
+            break
+    if existing_msg:
+        await existing_msg.edit(embed=embed)
+    else:
+        await channel.send(embed=embed)
 
 # Alerte vocale
 @bot.event
@@ -90,9 +131,7 @@ async def staff(ctx):
         color=0x2f3136
     )
     embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
-
     top_color = None
-
     for role_info in STAFF_ROLES:
         role = guild.get_role(role_info["id"])
         if role:
@@ -105,10 +144,8 @@ async def staff(ctx):
                     value="\n".join(members),
                     inline=False
                 )
-
     if top_color:
         embed.color = top_color
-
     embed.set_footer(text="Affiché par le bot", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
     await ctx.send(embed=embed)
 
@@ -125,9 +162,7 @@ async def on_interaction(interaction: discord.Interaction):
         if existing:
             await interaction.response.send_message("🚫 Tu as déjà un ticket ouvert.", ephemeral=True)
             return
-
         await interaction.response.defer(ephemeral=True)
-
         category = discord.utils.get(interaction.guild.categories, id=CATEGORY_TICKET_ID)
         overwrites = {
             interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
@@ -142,7 +177,6 @@ async def on_interaction(interaction: discord.Interaction):
         log_channel = bot.get_channel(CHANNEL_LOG_TICKET_ID)
         if log_channel:
             await log_channel.send(f"📨 Ticket ouvert par {interaction.user.mention} dans {ticket_channel.mention}.")
-
         await ticket_channel.send(
             f"👋 Bienvenue {interaction.user.mention} ! Merci d'être là.\n\n"
             "📋 **Merci de répondre aux questions suivantes :**\n"
