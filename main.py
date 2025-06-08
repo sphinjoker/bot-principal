@@ -238,8 +238,9 @@ async def setup_ticket(ctx):
     )
     await ctx.send(embed=embed, view=view)
 
-@bot.event
-async def on_member_update(before, after):
+    @bot.event
+    async def on_member_update(before, after):
+        print(f"[DEBUG] Mise à jour détectée pour : {after.display_name}")
     if not before.guild:
         return
 
