@@ -53,7 +53,7 @@ STAFF_ROLES = [
     {"name": "📣 Community Manager", "id": 1380987832369283234, "color": 0x0c0c0c},
     {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c},
 ]
-    @bot.event
+@bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user}")
 
