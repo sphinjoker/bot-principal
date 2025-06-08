@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord.ui import View, Button
 from flask import Flask
 from threading import Thread
@@ -10,27 +10,27 @@ from threading import Thread
 load_dotenv()
 token = os.getenv('TOKEN_BOT_DISCORD')
 
-# Serveur Flask pour keep_alive (utile pour Replit/Render)
-app = Flask('')
+# Serveur Flask pour keep_alive (utile pour Render ou Replit)
+app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "Bot is running!"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# Lancer keep_alive
 keep_alive()
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Remplace ces IDs par ceux de ton serveur
+# IDs à personnaliser
 CHANNEL_ID_VOCAL_ATTENDU = 1380993881641844777
 CHANNEL_ID_TEXTE_ALERTE = 1380993843876593765
 CHANNEL_ID_TICKET_BUTTON = 1380993796644409374
@@ -52,6 +52,7 @@ STAFF_ROLES = [
     {"name": "📣 Community Manager", "id": 1380987832369283234, "color": 0x0c0c0c},
     {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c},
 ]
+
 @bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user}")
@@ -73,6 +74,7 @@ class TicketButtonView(View):
                 custom_id="open_ticket"
             )
         )
+
 @bot.command()
 async def staff(ctx):
     guild = ctx.guild
@@ -92,7 +94,6 @@ async def staff(ctx):
             if members:
                 if not top_color:
                     top_color = role_info["color"]
-
                 embed.add_field(
                     name=f"{role_info['name']} ・ {len(members)} membre(s)",
                     value="\n".join(members),
@@ -103,8 +104,8 @@ async def staff(ctx):
         embed.color = top_color
 
     embed.set_footer(text="Affiché par le bot", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
-
     await ctx.send(embed=embed)
+
 @bot.command()
 async def ping(ctx):
     await ctx.send("🏓 Pong ! Je suis bien en ligne et prêt à fonctionner.")
@@ -184,6 +185,5 @@ async def setup_ticket(ctx):
         color=0x2f3136
     )
     await ctx.send(embed=embed, view=view)
-
 keep_alive()
 bot.run(token)
