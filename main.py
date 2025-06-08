@@ -43,6 +43,7 @@ ROLE_REFUSE_ID = 1380987903760535633
 ROLE_NON_WHITELIST_ID = 1380997110966784102
 CATEGORY_TICKET_ID = 1380996255664312391
 CHANNEL_LOG_TICKET_ID = 1380996350442864701
+
 STAFF_ROLES = [
     {"name": "👑 Directeur", "id": 1380987816997032106, "color": 0x0c0c0c},
     {"name": "🛡️ Responsable Staff", "id": 1380987822194036786, "color": 0xf30101},
@@ -53,7 +54,8 @@ STAFF_ROLES = [
     {"name": "📣 Community Manager", "id": 1380987832369283234, "color": 0x0c0c0c},
     {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c},
 ]
-    @bot.event
+
+@bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user}")
 
@@ -154,6 +156,5 @@ async def setup_ticket(ctx):
         color=0x2f3136
     )
     await ctx.send(embed=embed, view=view)
-
 keep_alive()
 bot.run(token)
