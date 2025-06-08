@@ -43,7 +43,6 @@ ROLE_REFUSE_ID = 1380987903760535633
 ROLE_NON_WHITELIST_ID = 1380997110966784102
 CATEGORY_TICKET_ID = 1380996255664312391
 CHANNEL_LOG_TICKET_ID = 1380996350442864701
-
 STAFF_ROLES = [
     {"name": "👑 Directeur", "id": 1380987816997032106, "color": 0x0c0c0c},
     {"name": "🛡️ Responsable Staff", "id": 1380987822194036786, "color": 0xf30101},
@@ -52,10 +51,7 @@ STAFF_ROLES = [
     {"name": "🔵 Modérateur", "id": 1380987828724568154, "color": 0x4c0daf},
     {"name": "🔵 Helpeur", "id": 1380987829995311145, "color": 0x281dcc},
     {"name": "📣 Community Manager", "id": 1380987832369283234, "color": 0x0c0c0c},
-    {"name": "🗺️ Mappeur", "id": 1380987836000000000, "color": 0x0c0c0c},  # Remplace par l'ID réel
-    {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c}
-]
-
+    {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c},
 @bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user}")
@@ -157,24 +153,6 @@ async def setup_ticket(ctx):
         color=0x2f3136
     )
     await ctx.send(embed=embed, view=view)
-
-# --- Nouvelle commande !staff qui affiche tous les rôles staff avec leurs membres ---
-
-@bot.command()
-async def staff(ctx):
-    embed = discord.Embed(title="💼 Staff du serveur", color=0x0c0c0c)
-
-    for role_info in STAFF_ROLES:
-        role_obj = ctx.guild.get_role(role_info["id"])
-        if role_obj:
-            members = [member.mention for member in role_obj.members]
-            description = "\n".join(members) if members else "Aucun membre avec ce rôle."
-        else:
-            description = "Rôle introuvable sur ce serveur."
-
-        embed.add_field(name=role_info["name"], value=description, inline=False)
-
-    await ctx.send(embed=embed)
 
 keep_alive()
 bot.run(token)
