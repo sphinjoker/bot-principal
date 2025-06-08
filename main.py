@@ -6,11 +6,11 @@ from discord.ui import View, Button
 from flask import Flask
 from threading import Thread
 
-# Charger les variables d'environnement
+# Chargement des variables d'environnement
 load_dotenv()
 token = os.getenv('TOKEN_BOT_DISCORD')
 
-# Serveur Flask pour keep_alive (utile pour Render ou Replit)
+# Flask pour le keep_alive
 app = Flask(__name__)
 
 @app.route('/')
@@ -27,10 +27,16 @@ def keep_alive():
 
 keep_alive()
 
-intents = discord.Intents.all()
+# Intents et initialisation du bot
+intents = discord.Intents.default()
+intents.members = True
+intents.message_content = True
+intents.guilds = True
+intents.voice_states = True
+
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# IDs à personnaliser
+# Paramètres personnalisés (à ajuster selon ton serveur)
 CHANNEL_ID_VOCAL_ATTENDU = 1380993881641844777
 CHANNEL_ID_TEXTE_ALERTE = 1380993843876593765
 CHANNEL_ID_TICKET_BUTTON = 1380993796644409374
@@ -42,6 +48,7 @@ ROLE_REFUSE_ID = 1380987903760535633
 ROLE_NON_WHITELIST_ID = 1380997110966784102
 CATEGORY_TICKET_ID = 1380996255664312391
 CHANNEL_LOG_TICKET_ID = 1380996350442864701
+
 STAFF_ROLES = [
     {"name": "👑 Directeur", "id": 1380987816997032106, "color": 0x0c0c0c},
     {"name": "🛡️ Responsable Staff", "id": 1380987822194036786, "color": 0xf30101},
@@ -80,7 +87,7 @@ async def staff(ctx):
     guild = ctx.guild
     embed = discord.Embed(
         title="📋 Liste des Membres du Staff",
-        description="Voici les membres qui encadrent et assurent le bon fonctionnement du serveur.\nN'hésitez pas à les contacter si besoin.",
+        description="Voici les membres qui encadrent le serveur.",
         color=0x2f3136
     )
     embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
@@ -128,17 +135,17 @@ async def on_interaction(interaction: discord.Interaction):
         if log_channel:
             await log_channel.send(f"📨 Ticket ouvert par {interaction.user.mention} dans {ticket_channel.mention}.")
         await ticket_channel.send(
-            f"👋 Bienvenue {interaction.user.mention} ! Merci d'être là.\n\n"
-            "📋 **Merci de répondre aux questions suivantes en copiant et collant tes réponses dans ce salon :**\n"
-            "1️⃣ Pseudo Discord (ex: Jean#1234)\n"
+            f"👋 Bienvenue {interaction.user.mention} !\n\n"
+            "📋 **Réponds aux questions suivantes :**\n"
+            "1️⃣ Pseudo Discord\n"
             "2️⃣ Âge\n"
-            "3️⃣ Pourquoi veux-tu rejoindre ce serveur ?\n"
-            "4️⃣ Quelle armée choisis-tu ? (Hexagonale ou Fédérale Ruzbeque)\n\n"
-            "⏳ Un douanier arrivera bientôt. En attendant, merci de patienter calmement.\n\n"
-            "🛃 **Commandes disponibles pour les douaniers :**\n"
-            "`!accepter @pseudo` – Accepter la whitelist ✅\n"
-            "`!secondechance @pseudo` – Seconde chance ⚠️\n"
-            "`!refuser @pseudo` – Refuser la demande ❌"
+            "3️⃣ Pourquoi veux-tu rejoindre ?\n"
+            "4️⃣ Hexagonale ou Fédérale Ruzbeque ?\n\n"
+            "⏳ Un douanier arrivera bientôt.\n\n"
+            "🛃 Commandes douaniers :\n"
+            "`!accepter @pseudo` – Accepter ✅\n"
+            "`!secondechance @pseudo` – 2ème chance ⚠️\n"
+            "`!refuser @pseudo` – Refuser ❌"
         )
         await interaction.response.send_message(f"✅ Ton ticket a été créé : {ticket_channel.mention}", ephemeral=True)
 
@@ -163,7 +170,7 @@ async def refuser(ctx, member: discord.Member):
 @bot.command()
 async def close(ctx, *, reason="Aucune raison spécifiée"):
     if ctx.channel.category and ctx.channel.category.id == CATEGORY_TICKET_ID:
-        await ctx.send(f"🔒 Ticket fermé pour la raison suivante : {reason}")
+        await ctx.send(f"🔒 Ticket fermé : {reason}")
         log_channel = bot.get_channel(CHANNEL_LOG_TICKET_ID)
         if log_channel:
             await log_channel.send(
@@ -178,12 +185,12 @@ async def setup_ticket(ctx):
         title="📜 Demande de Whitelist",
         description=(
             "Bienvenue sur le serveur ! 🚀\n\n"
-            "**Avant de faire une demande, lis bien le règlement ! 📘**\n"
-            "Assure-toi d’avoir bien compris les règles du serveur pour éviter tout malentendu. 🤝\n\n"
-            "Clique sur le bouton ci-dessous pour commencer ta demande de whitelist. Un douanier viendra te voir rapidement ! 🛂"
+            "**Avant de faire une demande, lis bien le règlement ! 📘**\n\n"
+            "Clique sur le bouton ci-dessous pour commencer ta demande."
         ),
         color=0x2f3136
     )
     await ctx.send(embed=embed, view=view)
-keep_alive()
+
+# Lancement du bot
 bot.run(token)
