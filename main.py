@@ -43,7 +43,15 @@ ROLE_REFUSE_ID = 1380987903760535633
 ROLE_NON_WHITELIST_ID = 1380997110966784102
 CATEGORY_TICKET_ID = 1380996255664312391
 CHANNEL_LOG_TICKET_ID = 1380996350442864701
-
+STAFF_ROLES = [
+    {"name": "👑 Directeur", "id": 1380987816997032106, "color": 0x0c0c0c},
+    {"name": "🛡️ Responsable Staff", "id": 1380987822194036786, "color": 0xf30101},
+    {"name": "🟣 Administrateur", "id": 1380987825675042977, "color": 0x80088b},
+    {"name": "🟢 Super Modérateur", "id": 1380987827441106955, "color": 0x0ed639},
+    {"name": "🔵 Modérateur", "id": 1380987828724568154, "color": 0x4c0daf},
+    {"name": "🔵 Helpeur", "id": 1380987829995311145, "color": 0x281dcc},
+    {"name": "📣 Community Manager", "id": 1380987832369283234, "color": 0x0c0c0c},
+    {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c},
 @bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user}")
@@ -65,6 +73,38 @@ class TicketButtonView(View):
                 custom_id="open_ticket"
             )
         )
+@bot.command()
+async def staff(ctx):
+    guild = ctx.guild
+    embed = discord.Embed(
+        title="📋 Liste des Membres du Staff",
+        description="Voici les membres qui encadrent et assurent le bon fonctionnement du serveur.\nN'hésitez pas à les contacter si besoin.",
+        color=0x2f3136
+    )
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+
+    top_color = None
+
+    for role_info in STAFF_ROLES:
+        role = guild.get_role(role_info["id"])
+        if role:
+            members = [m.mention for m in role.members]
+            if members:
+                if not top_color:
+                    top_color = role_info["color"]
+
+                embed.add_field(
+                    name=f"{role_info['name']} ・ {len(members)} membre(s)",
+                    value="\n".join(members),
+                    inline=False
+                )
+
+    if top_color:
+        embed.color = top_color
+
+    embed.set_footer(text="Affiché par le bot", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
+
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def ping(ctx):
@@ -146,5 +186,5 @@ async def setup_ticket(ctx):
     )
     await ctx.send(embed=embed, view=view)
 
-# Lancer le bot
+keep_alive()
 bot.run(token)
