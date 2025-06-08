@@ -1,5 +1,4 @@
 import os
-import requests
 from dotenv import load_dotenv
 import discord
 from discord.ext import commands, tasks
