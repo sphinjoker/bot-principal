@@ -109,8 +109,13 @@ async def on_member_update(before, after):
 
 @bot.command()
 async def staff(ctx):
-    await refresh_staff_embed()
-    await ctx.send("📈 Embed du staff mis à jour.")
+    try:
+        print(f"Commande !staff appelée par {ctx.author}")
+        await refresh_staff_embed()
+        await ctx.send("📈 Embed du staff mis à jour.")
+    except Exception as e:
+        print(f"Erreur dans la commande !staff : {e}")
+        await ctx.send("❌ Une erreur est survenue lors de la mise à jour de l'embed du staff.")
 
 @bot.event
 async def on_voice_state_update(member, before, after):
