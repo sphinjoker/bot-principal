@@ -43,7 +43,7 @@ ROLE_REFUSE_ID = 1380987903760535633
 ROLE_NON_WHITELIST_ID = 1380997110966784102
 CATEGORY_TICKET_ID = 1380996255664312391
 CHANNEL_LOG_TICKET_ID = 1380996350442864701
-STAFF_EMBED_CHANNEL_ID = 1380988215984394320  # Remplacer par l'ID réel
+STAFF_EMBED_CHANNEL_ID = 1380988215984394320  
 
 STAFF_ROLES = [
     {"name": "👑 Directeur", "id": 1380987816997032106, "color": 0x0c0c0c},
@@ -237,6 +237,52 @@ async def setup_ticket(ctx):
         color=0x2f3136
     )
     await ctx.send(embed=embed, view=view)
+
+@bot.event
+async def on_member_update(before, after):
+    if not before.guild:
+        return
+
+    channel = bot.get_channel(STAFF_EMBED_CHANNEL_ID)
+    if not channel:
+        return
+
+    guild = before.guild
+    staff_role_ids = [r["id"] for r in STAFF_ROLES]
+
+    # Vérifie si un rôle staff a été ajouté ou retiré
+    added_roles = [r for r in after.roles if r not in before.roles and r.id in staff_role_ids]
+    removed_roles = [r for r in before.roles if r not in after.roles and r.id in staff_role_ids]
+
+    if added_roles or removed_roles:
+        embed = discord.Embed(
+            title="📋 Liste des Membres du Staff",
+            description="Mise à jour automatique (rôle modifié).",
+            color=0x2f3136
+        )
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+
+        top_color = None
+        for role_info in STAFF_ROLES:
+            role = guild.get_role(role_info["id"])
+            if role:
+                members = [m.mention for m in role.members]
+                if members:
+                    if not top_color:
+                        top_color = role_info["color"]
+                    embed.add_field(
+                        name=f"{role_info['name']} ・ {len(members)} membre(s)",
+                        value="\n".join(members),
+                        inline=False
+                    )
+        if top_color:
+            embed.color = top_color
+
+        messages = await channel.history(limit=10).flatten()
+        for msg in messages:
+            if msg.author == bot.user and msg.embeds and msg.embeds[0].title == "📋 Liste des Membres du Staff":
+                await msg.edit(embed=embed)
+                break
 
 keep_alive()
 bot.run(token)
