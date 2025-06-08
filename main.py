@@ -1,7 +1,8 @@
 import os
+import requests
 from dotenv import load_dotenv
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.ui import View, Button
 from flask import Flask
 from threading import Thread
@@ -30,7 +31,7 @@ keep_alive()
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# IDs à remplacer par ceux de ton serveur
+# Remplace ces IDs par ceux de ton serveur
 CHANNEL_ID_VOCAL_ATTENDU = 1380993881641844777
 CHANNEL_ID_TEXTE_ALERTE = 1380993843876593765
 CHANNEL_ID_TICKET_BUTTON = 1380993796644409374
@@ -42,7 +43,6 @@ ROLE_REFUSE_ID = 1380987903760535633
 ROLE_NON_WHITELIST_ID = 1380997110966784102
 CATEGORY_TICKET_ID = 1380996255664312391
 CHANNEL_LOG_TICKET_ID = 1380996350442864701
-
 STAFF_ROLES = [
     {"name": "👑 Directeur", "id": 1380987816997032106, "color": 0x0c0c0c},
     {"name": "🛡️ Responsable Staff", "id": 1380987822194036786, "color": 0xf30101},
@@ -52,8 +52,6 @@ STAFF_ROLES = [
     {"name": "🔵 Helpeur", "id": 1380987829995311145, "color": 0x281dcc},
     {"name": "📣 Community Manager", "id": 1380987832369283234, "color": 0x0c0c0c},
     {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c},
-]
-
 @bot.event
 async def on_ready():
     print(f"✅ Le bot est connecté en tant que {bot.user}")
@@ -75,33 +73,53 @@ class TicketButtonView(View):
                 custom_id="open_ticket"
             )
         )
+@bot.command()
+async def staff(ctx):
+    guild = ctx.guild
+    embed = discord.Embed(
+        title="📋 Liste des Membres du Staff",
+        description="Voici les membres qui encadrent et assurent le bon fonctionnement du serveur.\nN'hésitez pas à les contacter si besoin.",
+        color=0x2f3136
+    )
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
 
+    top_color = None
+
+    for role_info in STAFF_ROLES:
+        role = guild.get_role(role_info["id"])
+        if role:
+            members = [m.mention for m in role.members]
+            if members:
+                if not top_color:
+                    top_color = role_info["color"]
+
+                embed.add_field(
+                    name=f"{role_info['name']} ・ {len(members)} membre(s)",
+                    value="\n".join(members),
+                    inline=False
+                )
+
+    if top_color:
+        embed.color = top_color
+
+    embed.set_footer(text="Affiché par le bot", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
+
+    await ctx.send(embed=embed)
 @bot.command()
 async def ping(ctx):
     await ctx.send("🏓 Pong ! Je suis bien en ligne et prêt à fonctionner.")
 
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
-    if interaction.type == discord.InteractionType.component and interaction.data.get("custom_id") == "open_ticket":
+    if interaction.type == discord.InteractionType.component and interaction.data["custom_id"] == "open_ticket":
         category = discord.utils.get(interaction.guild.categories, id=CATEGORY_TICKET_ID)
-        if not category:
-            await interaction.response.send_message("❌ La catégorie des tickets est introuvable.", ephemeral=True)
-            return
-
         overwrites = {
             interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
             interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
             interaction.guild.get_role(ROLE_DOUMANIERS_ID): discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
-
-        # Vérifier si un ticket existe déjà pour l'utilisateur
-        existing_channel = discord.utils.get(interaction.guild.text_channels, name=f"ticket-{interaction.user.name.lower()}")
-        if existing_channel:
-            await interaction.response.send_message(f"❗ Tu as déjà un ticket ouvert ici : {existing_channel.mention}", ephemeral=True)
-            return
-
         ticket_channel = await interaction.guild.create_text_channel(
-            name=f"ticket-{interaction.user.name.lower()}",
+            name=f"ticket-{interaction.user.name}",
             category=category,
             overwrites=overwrites
         )
@@ -123,51 +141,25 @@ async def on_interaction(interaction: discord.Interaction):
         )
         await interaction.response.send_message(f"✅ Ton ticket a été créé : {ticket_channel.mention}", ephemeral=True)
 
-def has_staff_role():
-    def predicate(ctx):
-        author_roles = [role.id for role in ctx.author.roles]
-        staff_role_ids = [role["id"] for role in STAFF_ROLES]
-        return any(rid in author_roles for rid in staff_role_ids)
-    return commands.check(predicate)
-
 @bot.command()
-@has_staff_role()
 async def accepter(ctx, member: discord.Member):
-    role_accepte = ctx.guild.get_role(ROLE_ACCEPTE_ID)
-    role_non_whitelist = ctx.guild.get_role(ROLE_NON_WHITELIST_ID)
-    if not role_accepte or not role_non_whitelist:
-        await ctx.send("❌ Les rôles n'ont pas été trouvés sur ce serveur.")
-        return
-    await member.add_roles(role_accepte)
-    await member.remove_roles(role_non_whitelist)
+    await member.add_roles(ctx.guild.get_role(ROLE_ACCEPTE_ID))
+    await member.remove_roles(ctx.guild.get_role(ROLE_NON_WHITELIST_ID))
     await ctx.send(f"✅ {member.mention} a été accepté(e) dans la whitelist.")
 
 @bot.command()
-@has_staff_role()
 async def secondechance(ctx, member: discord.Member):
-    role_seconde_chance = ctx.guild.get_role(ROLE_SECONDE_CHANCE_ID)
-    role_non_whitelist = ctx.guild.get_role(ROLE_NON_WHITELIST_ID)
-    if not role_seconde_chance or not role_non_whitelist:
-        await ctx.send("❌ Les rôles n'ont pas été trouvés sur ce serveur.")
-        return
-    await member.add_roles(role_seconde_chance)
-    await member.remove_roles(role_non_whitelist)
+    await member.add_roles(ctx.guild.get_role(ROLE_SECONDE_CHANCE_ID))
+    await member.remove_roles(ctx.guild.get_role(ROLE_NON_WHITELIST_ID))
     await ctx.send(f"⚠️ {member.mention} a une seconde chance.")
 
 @bot.command()
-@has_staff_role()
 async def refuser(ctx, member: discord.Member):
-    role_refuse = ctx.guild.get_role(ROLE_REFUSE_ID)
-    role_non_whitelist = ctx.guild.get_role(ROLE_NON_WHITELIST_ID)
-    if not role_refuse or not role_non_whitelist:
-        await ctx.send("❌ Les rôles n'ont pas été trouvés sur ce serveur.")
-        return
-    await member.add_roles(role_refuse)
-    await member.remove_roles(role_non_whitelist)
+    await member.add_roles(ctx.guild.get_role(ROLE_REFUSE_ID))
+    await member.remove_roles(ctx.guild.get_role(ROLE_NON_WHITELIST_ID))
     await ctx.send(f"❌ {member.mention} a été refusé(e).")
 
 @bot.command()
-@has_staff_role()
 async def close(ctx, *, reason="Aucune raison spécifiée"):
     if ctx.channel.category and ctx.channel.category.id == CATEGORY_TICKET_ID:
         await ctx.send(f"🔒 Ticket fermé pour la raison suivante : {reason}")
@@ -177,11 +169,8 @@ async def close(ctx, *, reason="Aucune raison spécifiée"):
                 f"📁 Ticket `{ctx.channel.name}` fermé par {ctx.author.mention}.\n📄 Raison : {reason}"
             )
         await ctx.channel.delete()
-    else:
-        await ctx.send("❌ Cette commande doit être utilisée dans un salon de ticket.")
 
 @bot.command()
-@has_staff_role()
 async def setup_ticket(ctx):
     view = TicketButtonView()
     embed = discord.Embed(
@@ -195,5 +184,6 @@ async def setup_ticket(ctx):
         color=0x2f3136
     )
     await ctx.send(embed=embed, view=view)
+
 keep_alive()
 bot.run(token)
