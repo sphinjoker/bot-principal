@@ -1,32 +1,32 @@
 import os
+import requests  # ❗️Tu avais oublié d'importer requests
+from dotenv import load_dotenv 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks  # ❗️Tu avais oublié "tasks" pour la loop
 from discord.ui import View, Button
-
 from flask import Flask
 from threading import Thread
 
-# KEEP ALIVE POUR REPLIT
-app = Flask('')
+# Charger les variables d'environnement (.env)
+load_dotenv()
+token = os.getenv('TOKEN_BOT_DISCORD')
 
+# KEEP ALIVE POUR REPLIT/RENDER
+app = Flask('')
 
 @app.route('/')
 def home():
-    print("Ping reçu sur /"
-          )  # Pour debug, montre que Uptimerobot ping bien la route
+    print("Ping reçu sur /")  # Pour debug, montre que Uptimerobot ping bien la route
     return "Bot is running!"
-
 
 def run():
     app.run(host='0.0.0.0', port=8080)
-
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
-
-# APPEL DE KEEP_ALIVE POUR LANCER LE SERVEUR FLASK EN THREAD
+# Lancer le serveur Flask en tâche parallèle
 keep_alive()
 
 # Afficher l'URL dans la console Replit
@@ -179,7 +179,7 @@ async def setup_ticket(ctx):
     await ctx.send(embed=embed, view=view)
 
 
-pip > requirements.txt
+
 
 keep_alive()
 bot.run(os.environ['TOKEN_BOT_DISCORD'])
