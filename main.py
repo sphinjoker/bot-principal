@@ -57,7 +57,8 @@ STAFF_ROLES = [
     {"name": "🔵 Modérateur", "id": 1380987828724568154, "color": 0x4c0daf},
     {"name": "🔵 Helpeur", "id": 1380987829995311145, "color": 0x281dcc},
     {"name": "📣 Community Manager", "id": 1380987832369283234, "color": 0x0c0c0c},
-    {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c},
+    {"name": "🗺️ Mappeur", "id": 1380987833866780674, "color": 0x0c0c0c},
+    {"name": "💻 Développeur", "id": 1380987835250770002, "color": 0x0c0c0c}
 ]
 
 @bot.event
